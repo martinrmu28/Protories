@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Protories v2 | IA Vision</title>
+    <title>Protories v2.1 | IA Vision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -22,7 +22,7 @@
 
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-2xl font-black italic tracking-tighter uppercase">Protories <span class="garmin-blue text-sm not-italic font-bold">v2.0</span></h1>
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase">Protories <span class="garmin-blue text-sm not-italic font-bold">v2.1</span></h1>
             <p id="date-now" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
         </div>
         <div class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
@@ -45,7 +45,7 @@
             <span id="btn-text" class="uppercase tracking-tight">📸 Analyser mon plat</span>
         </label>
         <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="processImage(this)">
-        <p id="log" class="text-[10px] text-center mt-3 text-slate-500 italic uppercase tracking-wider font-medium min-h-[20px]">Prêt pour scan v2</p>
+        <p id="log" class="text-[10px] text-center mt-3 text-slate-500 italic uppercase tracking-wider font-medium min-h-[20px]">Prêt pour scan v2.1</p>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -60,7 +60,6 @@
     </div>
 
     <script>
-        // TA CLE EST DEJA INTEGREE ICI
         const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo"; 
         const GOAL = 160;
         let total = parseInt(localStorage.getItem('prot_total')) || 0;
@@ -90,88 +89,4 @@
             log.className = `text-[10px] text-center mt-3 italic uppercase tracking-wider font-bold min-h-[20px] ${isError ? 'text-red-500' : 'text-green-400'}`;
             if (!isError) {
                 setTimeout(() => {
-                    log.className = "text-[10px] text-center mt-3 text-slate-500 italic uppercase tracking-wider font-medium min-h-[20px]";
-                    log.innerText = "Prêt pour scan v2";
-                }, 4000);
-            }
-        }
-
-        async function processImage(input) {
-            const file = input.files[0];
-            if(!file) return;
-
-            const btnContainer = document.getElementById('ia-container');
-            const btnText = document.getElementById('btn-text');
-            btnContainer.classList.add('scanning');
-            btnText.innerText = "Analyse...";
-            feedback("Compression...");
-
-            try {
-                const base64Image = await compressImage(file);
-                
-                feedback("Envoi à Gemini...");
-
-                // CORRECTION : Utilisation de v1 (stable) et du modèle standard
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [
-                            { text: "Tu es un expert en nutrition. Regarde cette photo. Estime la quantité totale de protéines en grammes. Réponds UNIQUEMENT par le chiffre (exemple: 25). Si tu ne vois pas de nourriture, réponds 0." },
-                            { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-                        ]}]
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(`Erreur API: ${data.error?.message || response.statusText}`);
-                }
-                
-                if (data.error) throw new Error(data.error.message);
-
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                const match = text.match(/(\d+)/); 
-                const proteinValue = match ? parseInt(match[0]) : 0;
-
-                if (proteinValue > 0) {
-                    total += proteinValue;
-                    updateUI();
-                    feedback(`✅ +${proteinValue}g détectés !`);
-                } else {
-                    feedback("⚠️ Aucune protéine trouvée", true);
-                }
-
-            } catch (error) {
-                console.error(error);
-                feedback("❌ " + error.message, true);
-            } finally {
-                btnContainer.classList.remove('scanning');
-                btnText.innerText = "📸 Analyser mon plat";
-                input.value = '';
-            }
-        }
-
-        function compressImage(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const scale = 800 / Math.max(img.width, 800);
-                        canvas.width = img.width * scale;
-                        canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6).split(',')[1]);
-                    };
-                };
-            });
-        }
-    </script>
-</body>
-</html>
+                    log.className = "text-[10px] text-center mt-3 text-slate-500 italic uppercase
