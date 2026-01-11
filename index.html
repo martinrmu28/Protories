@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Protories v3.5 | Smart Select</title>
+    <title>Protories v3.5 | Library</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -12,9 +12,14 @@
         .progress-ring { transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
         .btn-active:active { transform: scale(0.96); opacity: 0.9; }
         
-        /* Style des tags sélectionnés */
-        .tag-selected { background-color: #00a9e0 !important; color: white !important; border-color: #00a9e0 !important; }
+        /* Scroll invisible mais fonctionnel */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Style des onglets actifs */
+        .tab-active { background-color: #00a9e0; color: white; border-color: #00a9e0; }
+        .item-selected { background-color: #1e293b; border-color: #00a9e0; color: #00a9e0; }
+        
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(0, 169, 224, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(0, 169, 224, 0); }
@@ -23,7 +28,7 @@
         .scanning { animation: pulse-ring 1.5s infinite; border-color: #00a9e0 !important; color: #00a9e0 !important; }
     </style>
 </head>
-<body class="p-6 max-w-md mx-auto select-none">
+<body class="p-4 max-w-md mx-auto select-none pb-20">
 
     <div class="flex justify-between items-center mb-6">
         <div>
@@ -34,20 +39,289 @@
     </div>
 
     <div class="relative flex justify-center items-center mb-6">
-        <svg class="w-64 h-64 drop-shadow-2xl">
-            <circle cx="128" cy="128" r="110" stroke="#1e293b" stroke-width="12" fill="transparent" />
-            <circle id="progress" cx="128" cy="128" r="110" stroke="#00a9e0" stroke-width="12" fill="transparent" 
-                    stroke-dasharray="691" stroke-dashoffset="691" stroke-linecap="round" class="progress-ring" />
+        <svg class="w-56 h-56 drop-shadow-2xl">
+            <circle cx="112" cy="112" r="95" stroke="#1e293b" stroke-width="10" fill="transparent" />
+            <circle id="progress" cx="112" cy="112" r="95" stroke="#00a9e0" stroke-width="10" fill="transparent" 
+                    stroke-dasharray="597" stroke-dashoffset="597" stroke-linecap="round" class="progress-ring" />
         </svg>
         <div class="absolute text-center flex flex-col items-center">
-            <span id="display-val" class="text-6xl font-black italic tracking-tighter text-white leading-none">0</span>
+            <span id="display-val" class="text-5xl font-black italic tracking-tighter text-white leading-none">0</span>
             <span class="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-widest mb-2">Objectif <span id="goal-display">120</span>g</span>
             <div class="bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700/50 mt-1">
-                <span class="text-sm font-black cal-orange">🔥 <span id="display-cal">0</span> Kcal</span>
+                <span class="text-xs font-black cal-orange">🔥 <span id="display-cal">0</span> Kcal</span>
             </div>
         </div>
     </div>
 
     <div class="mb-4">
-        <div class="flex justify-between items-center mb-2 px-1">
-            <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Qu
+        <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-2 pl-1">Composition du plat</p>
+        
+        <input type="text" id="user-context" placeholder="Sélectionne ou écris..." class="w-full bg-[#161b22] text-white text-sm p-3 rounded-xl border border-slate-800 focus:border-blue-500 focus:outline-none mb-3 placeholder-slate-600">
+        
+        <div class="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1" id="category-tabs">
+            </div>
+
+        <div class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto no-scrollbar p-1" id="items-grid">
+            </div>
+    </div>
+
+    <div class="mb-6 mt-4">
+        <label for="file-upload" id="ia-container" class="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 btn-active transition-all cursor-pointer shadow-lg shadow-white/5 border-2 border-transparent">
+            <span id="btn-text" class="uppercase tracking-tight">📸 Analyser</span>
+        </label>
+        <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="processImage(this)">
+        <p id="log" class="text-[10px] text-center mt-2 text-slate-500 italic uppercase tracking-wider font-medium min-h-[20px]">Prêt</p>
+    </div>
+
+    <div id="details-section" class="hidden mb-6 bg-[#161b22] p-4 rounded-xl border border-slate-800/50">
+        <div class="flex justify-between items-center mb-3 border-b border-slate-700 pb-2">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Résultat</h3>
+            <span id="macros-summary" class="text-[9px] text-slate-400 font-mono"></span>
+        </div>
+        <ul id="meal-list" class="space-y-3"></ul>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="add(25, 120)" class="bg-[#1e293b] p-4 rounded-xl border border-slate-800/50 text-left btn-active transition-all">
+            <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Shaker</span>
+            <span class="text-lg font-black italic text-white">+25g</span>
+        </button>
+        <button onclick="reset()" class="bg-[#1e293b] p-4 rounded-xl border border-red-900/10 text-left btn-active transition-all group">
+            <span class="block text-[10px] text-red-500/70 uppercase font-bold mb-1 group-hover:text-red-500 transition-colors">Reset</span>
+            <span class="text-lg font-black italic text-red-500 tracking-tighter">VIDER</span>
+        </button>
+    </div>
+
+    <script>
+        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo"; 
+        const GOAL = 120; // Objectif mis à jour
+        
+        // --- DONNÉES UTILISATEUR ---
+        const foodData = {
+            "Viandes": ["Poulet", "Dinde", "Bœuf", "Veau", "Porc", "Agneau", "Canard"],
+            "Poissons": ["Saumon", "Thon", "Cabillaud", "Sardines", "Bar/Dorade"],
+            "Mer": ["Crevettes", "Gambas", "Crabe", "Moules", "St-Jacques", "Calamars"],
+            "Œufs/Lait": ["Œufs", "Skyr", "Fromage blanc", "Mozzarella", "Parmesan", "Lait"],
+            "Légumineuses": ["Lentilles", "Pois chiches", "Haricots rouges", "Fèves"],
+            "Végé/Soja": ["Tofu", "Tempeh", "Edamame", "Protéines Soja"],
+            "Céréales": ["Riz", "Quinoa", "Avoine", "Pâtes", "Sarrasin"],
+            "Nuts": ["Amandes", "Noix", "Cajou", "Beurre Cacahuète", "Graines Chia"],
+            "Suppléments": ["Whey", "Barre Prot", "Clear Whey", "Caséine"]
+        };
+
+        let currentCategory = "Viandes";
+        let selectedItems = [];
+
+        // --- INIT ---
+        let totalProt = parseInt(localStorage.getItem('prot_total')) || 0;
+        let totalCal = parseInt(localStorage.getItem('cal_total')) || 0;
+
+        document.getElementById('date-now').innerText = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'short'});
+        initCategories();
+        updateUI();
+
+        // --- GESTION DES CATÉGORIES ---
+        function initCategories() {
+            const tabsContainer = document.getElementById('category-tabs');
+            tabsContainer.innerHTML = '';
+            
+            Object.keys(foodData).forEach(cat => {
+                const btn = document.createElement('button');
+                btn.innerText = cat;
+                btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 whitespace-nowrap transition-all ${cat === currentCategory ? 'tab-active' : 'text-slate-400 bg-slate-900'}`;
+                btn.onclick = () => {
+                    currentCategory = cat;
+                    initCategories(); // Re-render tabs styles
+                    renderItems();
+                };
+                tabsContainer.appendChild(btn);
+            });
+            renderItems();
+        }
+
+        function renderItems() {
+            const grid = document.getElementById('items-grid');
+            grid.innerHTML = '';
+            
+            foodData[currentCategory].forEach(item => {
+                const btn = document.createElement('button');
+                btn.innerText = item;
+                // Style conditionnel si déjà sélectionné
+                const isSelected = selectedItems.includes(item);
+                btn.className = `p-2 rounded-md text-[10px] font-bold border transition-all ${isSelected ? 'item-selected border-blue-500' : 'border-slate-800 bg-slate-900 text-slate-400'}`;
+                
+                btn.onclick = () => toggleItem(item);
+                grid.appendChild(btn);
+            });
+        }
+
+        function toggleItem(item) {
+            const input = document.getElementById('user-context');
+            
+            if (selectedItems.includes(item)) {
+                selectedItems = selectedItems.filter(i => i !== item);
+            } else {
+                selectedItems.push(item);
+            }
+            
+            // Mise à jour visuelle immédiate
+            renderItems();
+            
+            // Mise à jour de l'input
+            input.value = selectedItems.join(", ");
+        }
+
+        function updateUI() {
+            document.getElementById('display-val').innerText = totalProt;
+            document.getElementById('display-cal').innerText = totalCal;
+            const maxCircumference = 597; // Calculé pour r=95
+            const offset = maxCircumference - (Math.min(totalProt, GOAL) / GOAL * maxCircumference);
+            document.getElementById('progress').style.strokeDashoffset = offset;
+            localStorage.setItem('prot_total', totalProt);
+            localStorage.setItem('cal_total', totalCal);
+        }
+
+        function add(p, c) { totalProt += p; totalCal += c; updateUI(); feedback("Ajout manuel ok"); }
+        function reset() { 
+            if(confirm('Tout effacer ?')) { 
+                totalProt = 0; totalCal = 0; updateUI(); 
+                document.getElementById('details-section').classList.add('hidden');
+                document.getElementById('user-context').value = ''; 
+                selectedItems = [];
+                renderItems();
+                feedback("Zéro !"); 
+            } 
+        }
+
+        function feedback(msg, isError = false) {
+            const log = document.getElementById('log');
+            log.innerText = msg;
+            log.className = `text-[10px] text-center mt-2 italic uppercase tracking-wider font-bold min-h-[20px] ${isError ? 'text-red-500' : 'text-green-400'}`;
+        }
+
+        async function processImage(input) {
+            const file = input.files[0];
+            if(!file) return;
+
+            const userContext = document.getElementById('user-context').value;
+            const btnContainer = document.getElementById('ia-container');
+            const btnText = document.getElementById('btn-text');
+            const listContainer = document.getElementById('meal-list');
+            const detailsSection = document.getElementById('details-section');
+            const macrosSummary = document.getElementById('macros-summary');
+
+            detailsSection.classList.add('hidden');
+            listContainer.innerHTML = '';
+            btnContainer.classList.add('scanning');
+            btnText.innerText = "Traitement...";
+            feedback("Lecture image...");
+
+            const timeoutSignal = AbortSignal.timeout(25000); 
+
+            try {
+                const base64Image = await compressImage(file);
+                
+                btnText.innerText = "Gemini 2.5...";
+                feedback("Analyse ciblée...");
+
+                let promptText = "Tu es un nutritionniste expert. Analyse cette photo.";
+                if (userContext.trim().length > 0) {
+                    promptText += ` Le plat contient : "${userContext}". Utilise cette liste pour identifier précisément les aliments et leurs quantités.`;
+                }
+                promptText += " Estime les valeurs. Renvoie un JSON strict : { \"total_calories\": entier, \"total_protein\": entier, \"total_carbs\": entier, \"total_fat\": entier, \"items\": [ {\"name\": \"Aliment (poids)\", \"cal\": entier, \"prot\": entier, \"carbs\": entier, \"fat\": entier} ] }";
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    signal: timeoutSignal,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [
+                            { text: promptText },
+                            { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+                        ]}],
+                        safetySettings: [
+                            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(`API Error`);
+
+                let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const result = JSON.parse(text);
+
+                if (result.total_calories > 0 || result.total_protein > 0) {
+                    totalProt += result.total_protein;
+                    totalCal += result.total_calories;
+                    updateUI();
+                    
+                    detailsSection.classList.remove('hidden');
+                    macrosSummary.innerText = `G: ${result.total_carbs}g • L: ${result.total_fat}g`;
+
+                    result.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = "flex flex-col border-b border-slate-800 pb-2 last:border-0";
+                        li.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-200 font-medium text-sm">${item.name}</span>
+                                <div class="flex gap-2">
+                                    <span class="text-orange-400 text-xs font-bold">${item.cal}</span>
+                                    <span class="text-white bg-[#1e293b] px-2 py-0.5 rounded text-xs font-bold">+${item.prot}g</span>
+                                </div>
+                            </div>
+                        `;
+                        listContainer.appendChild(li);
+                    });
+
+                    feedback(`✅ Succès !`);
+                    // Reset sélection
+                    selectedItems = [];
+                    document.getElementById('user-context').value = '';
+                    renderItems();
+                } else {
+                    feedback("IA: Rien détecté", true);
+                }
+
+            } catch (error) {
+                console.error(error);
+                feedback("❌ Erreur", true);
+            } finally {
+                btnContainer.classList.remove('scanning');
+                btnText.innerText = "📸 Analyser";
+                input.value = '';
+                setTimeout(() => {
+                   document.getElementById('log').innerText = "Prêt";
+                   document.getElementById('log').className = "text-[10px] text-center mt-2 text-slate-500 italic uppercase tracking-wider font-medium min-h-[20px]";
+                }, 8000);
+            }
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxSize = 800;
+                        let width = img.width; let height = img.height;
+                        if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } } 
+                        else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                        canvas.width = width; canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6).split(',')[1]);
+                    };
+                    img.onerror = () => reject(new Error("Img Error"));
+                };
+                reader.onerror = () => reject(new Error("File Error"));
+            });
+        }
+    </script>
+</body>
+</html>
