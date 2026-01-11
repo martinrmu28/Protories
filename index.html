@@ -2,127 +2,194 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Protories | IA Vision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+        /* Optimisation Mobile */
+        body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
         .garmin-blue { color: #00a9e0; }
-        .progress-ring { transition: stroke-dashoffset 0.5s ease-in-out; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .progress-ring { transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
+        
+        /* Effet de clic satisfaisant */
+        .btn-active:active { transform: scale(0.96); opacity: 0.9; }
+        
+        /* Animation de scan */
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(0, 169, 224, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 169, 224, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 169, 224, 0); }
+        }
+        .scanning { animation: pulse-ring 1.5s infinite; border-color: #00a9e0 !important; color: #00a9e0 !important; }
     </style>
 </head>
-<body class="p-6 max-w-md mx-auto">
+<body class="p-6 max-w-md mx-auto select-none">
 
-    <div class="flex justify-between items-center mb-10">
+    <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-2xl font-black italic tracking-tighter">PROTORIES <span class="garmin-blue text-sm not-italic font-bold">PRO</span></h1>
+            <h1 class="text-2xl font-black italic tracking-tighter uppercase">Protories <span class="garmin-blue text-sm not-italic font-bold">PRO</span></h1>
             <p id="date-now" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
         </div>
-        <div id="status-dot" class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
+        <div class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
     </div>
 
     <div class="relative flex justify-center items-center mb-10">
-        <svg class="w-64 h-64">
+        <svg class="w-64 h-64 drop-shadow-2xl">
             <circle cx="128" cy="128" r="110" stroke="#1e293b" stroke-width="12" fill="transparent" />
             <circle id="progress" cx="128" cy="128" r="110" stroke="#00a9e0" stroke-width="12" fill="transparent" 
                     stroke-dasharray="691" stroke-dashoffset="691" stroke-linecap="round" class="progress-ring" />
         </svg>
         <div class="absolute text-center">
-            <span id="display-val" class="text-6xl font-black italic">0</span>
-            <span class="block text-[10px] text-slate-500 font-bold uppercase mt-1">G PROTEINES / 160</span>
+            <span id="display-val" class="text-6xl font-black italic tracking-tighter text-white">0</span>
+            <span class="block text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-widest">Objectif <span id="goal-display">160</span>g</span>
         </div>
     </div>
 
     <div class="mb-8">
-        <label for="file-upload" id="ia-label" class="w-full bg-white text-black font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all cursor-pointer text-center">
-            <span id="btn-text">📸 ANALYSER MON PLAT (IA)</span>
+        <label for="file-upload" id="ia-container" class="w-full bg-white text-black font-black py-5 rounded-2xl flex items-center justify-center gap-3 btn-active transition-all cursor-pointer shadow-lg shadow-white/5 border-2 border-transparent">
+            <span id="btn-text" class="uppercase tracking-tight">📸 Analyser mon plat</span>
         </label>
-        <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this)">
-        <p id="log" class="text-[10px] text-center mt-3 text-slate-600 italic uppercase tracking-wider">Prêt pour scan visuel</p>
+        <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="processImage(this)">
+        <p id="log" class="text-[10px] text-center mt-3 text-slate-500 italic uppercase tracking-wider font-medium h-4">Prêt pour scan</p>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-        <button onclick="add(25)" class="bg-[#1e293b] p-4 rounded-xl border border-slate-800 text-left active:scale-95 transition-all">
-            <span class="block text-[10px] text-slate-500 uppercase font-bold">Shaker</span>
-            <span class="text-lg font-bold">+25g</span>
+        <button onclick="add(25)" class="bg-[#1e293b] p-5 rounded-2xl border border-slate-800/50 text-left btn-active transition-all">
+            <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">Ajout Rapide</span>
+            <span class="text-xl font-black italic text-white">+25g</span>
         </button>
-        <button onclick="reset()" class="bg-[#1e293b] p-4 rounded-xl border border-red-900/20 text-left active:scale-95 transition-all">
-            <span class="block text-[10px] text-red-500 uppercase font-bold">Reset</span>
-            <span class="text-lg font-bold text-red-500 tracking-tighter">VIDER</span>
+        <button onclick="reset()" class="bg-[#1e293b] p-5 rounded-2xl border border-red-900/10 text-left btn-active transition-all group">
+            <span class="block text-[10px] text-red-500/70 uppercase font-bold mb-1 group-hover:text-red-500 transition-colors">Remise à zéro</span>
+            <span class="text-xl font-black italic text-red-500 tracking-tighter">VIDER</span>
         </button>
     </div>
 
     <script>
-        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo";
+        // --- CONFIGURATION ---
+        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo"; 
+        const GOAL = 160;
+        
+        // --- ETAT ---
         let total = parseInt(localStorage.getItem('prot_total')) || 0;
-        const goal = 160;
 
-        function update() {
+        // --- INIT ---
+        document.getElementById('date-now').innerText = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'short'});
+        updateUI();
+
+        // --- FONCTIONS CORE ---
+        function updateUI() {
             document.getElementById('display-val').innerText = total;
-            const offset = 691 - (total / goal * 691);
-            document.getElementById('progress').style.strokeDashoffset = Math.max(0, offset);
+            // Calcul mathématique précis pour la jauge
+            const maxCircumference = 691;
+            const offset = maxCircumference - (Math.min(total, GOAL) / GOAL * maxCircumference);
+            document.getElementById('progress').style.strokeDashoffset = offset;
+            
+            // Sauvegarde auto
             localStorage.setItem('prot_total', total);
-            document.getElementById('date-now').innerText = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'short'});
         }
 
-        function add(n) { total += n; update(); }
-        function reset() { if(confirm('Réinitialiser ?')){ total = 0; update(); } }
+        function add(n) { 
+            total += n; 
+            updateUI(); 
+            feedback("Ajout manuel effectué");
+        }
 
-        async function handleImage(input) {
+        function reset() { 
+            if(confirm('Voulez-vous vraiment remettre le compteur à 0 pour aujourd\'hui ?')) { 
+                total = 0; 
+                updateUI(); 
+                feedback("Compteur réinitialisé");
+            } 
+        }
+
+        function feedback(msg, isError = false) {
+            const log = document.getElementById('log');
+            log.innerText = msg;
+            log.className = `text-[10px] text-center mt-3 italic uppercase tracking-wider font-medium h-4 ${isError ? 'text-red-400' : 'text-green-400'}`;
+            setTimeout(() => {
+                if(log.innerText === msg) log.className = "text-[10px] text-center mt-3 text-slate-500 italic uppercase tracking-wider font-medium h-4";
+            }, 3000);
+        }
+
+        // --- LOGIQUE IA & COMPRESSION (LE COEUR DU SYSTEME) ---
+        async function processImage(input) {
             const file = input.files[0];
             if(!file) return;
 
-            const label = document.getElementById('ia-label');
-            const log = document.getElementById('log');
+            // UI Loading
+            const btnContainer = document.getElementById('ia-container');
             const btnText = document.getElementById('btn-text');
+            btnContainer.classList.add('scanning');
+            btnText.innerText = "Analyse en cours...";
+            feedback("Compression & Envoi...");
 
-            label.style.opacity = "0.5";
-            btnText.innerText = "ANALYSE EN COURS...";
-            log.innerText = "Envoi à Gemini...";
+            try {
+                // 1. Compression de l'image (Essentiel pour la vitesse)
+                const base64Image = await compressImage(file);
 
-            const reader = new FileReader();
-            reader.onload = async () => {
-                const base64 = reader.result.split(',')[1];
-                try {
-                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [
-                                { text: "Analyse cette photo de nourriture. Estime le poids total et donne UNIQUEMENT le nombre de grammes de protéines total sous la forme d'un chiffre seul. Si tu ne vois pas de nourriture, réponds 0." },
-                                { inline_data: { mime_type: "image/jpeg", data: base64 } }
-                            ]}]
-                        })
-                    });
-                    
-                    const data = await resp.json();
-                    
-                    if (data.error) {
-                        log.innerText = "Erreur : " + data.error.message;
-                        return;
-                    }
+                // 2. Appel API Gemini v1
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [
+                            { text: "Expert nutritionniste. Estime les protéines totales de ce plat en grammes. Réponds UNIQUEMENT par un chiffre (ex: 25). Si pas de nourriture, réponds 0." },
+                            { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+                        ]}]
+                    })
+                });
 
-                    const textResponse = data.candidates[0].content.parts[0].text;
-                    const result = parseInt(textResponse.match(/\d+/)[0]);
-                    
-                    if(!isNaN(result)) {
-                        total += result;
-                        update();
-                        log.innerText = `+${result}g protéines détectés !`;
-                    } else {
-                        log.innerText = "Impossible de lire le résultat.";
-                    }
-                } catch (e) {
-                    log.innerText = "Erreur réseau.";
-                } finally {
-                    label.style.opacity = "1";
-                    btnText.innerText = "📸 ANALYSER MON PLAT (IA)";
-                    input.value = '';
+                const data = await response.json();
+                
+                // 3. Gestion d'erreur API
+                if (data.error) throw new Error(data.error.message);
+
+                // 4. Extraction robuste du chiffre
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                const match = text.match(/(\d+)/); // Trouve le premier chiffre
+                const proteinValue = match ? parseInt(match[0]) : 0;
+
+                if (proteinValue > 0) {
+                    total += proteinValue;
+                    updateUI();
+                    feedback(`Succès ! +${proteinValue}g détectés`);
+                } else {
+                    feedback("Aucune protéine détectée", true);
                 }
-            };
-            reader.readAsDataURL(file);
+
+            } catch (error) {
+                console.error(error);
+                feedback("Erreur connexion IA", true);
+            } finally {
+                // Reset UI
+                btnContainer.classList.remove('scanning');
+                btnText.innerText = "📸 Analyser mon plat";
+                input.value = ''; // Permet de reprendre la même photo si besoin
+            }
         }
-        update();
+
+        // --- UTILITAIRE DE COMPRESSION ---
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        // Redimensionner à max 800px de large (suffisant pour l'IA)
+                        const scale = 800 / Math.max(img.width, 800);
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        // Export en JPEG qualité 0.7 (Gain de poids énorme)
+                        resolve(canvas.toDataURL('image/jpeg', 0.7).split(',')[1]);
+                    };
+                };
+            });
+        }
     </script>
 </body>
 </html>
