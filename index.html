@@ -3,114 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protories | IA Nutrition</title>
+    <title>Protories | IA Vision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0b0e14; color: #e2e8f0; font-family: 'Inter', sans-serif; }
         .garmin-blue { color: #00a9e0; }
-        .garmin-border { border-color: #1e293b; }
-        .btn-action { background-color: #1e293b; transition: all 0.2s; }
-        .btn-action:active { transform: scale(0.95); }
+        .progress-ring { transition: stroke-dashoffset 0.5s ease-in-out; transform: rotate(-90deg); transform-origin: 50% 50%; }
     </style>
 </head>
 <body class="p-6 max-w-md mx-auto">
 
     <div class="flex justify-between items-center mb-10">
         <div>
-            <h1 class="text-2xl font-black tracking-tighter">PROTORIES <span class="garmin-blue">PRO</span></h1>
-            <p id="date-display" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold"></p>
+            <h1 class="text-2xl font-black italic tracking-tighter">PROTORIES <span class="garmin-blue text-sm not-italic font-bold">PRO</span></h1>
+            <p id="date-now" class="text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
         </div>
-        <div class="h-8 w-8 rounded-full border-2 border-sky-500 flex items-center justify-center">
-            <div class="h-4 w-4 bg-sky-500 rounded-full animate-pulse"></div>
-        </div>
+        <div id="status-dot" class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
     </div>
 
     <div class="relative flex justify-center items-center mb-10">
-        <svg class="w-64 h-64 transform -rotate-90">
-            <circle cx="128" cy="128" r="110" stroke="#1e293b" stroke-width="14" fill="transparent" />
-            <circle id="progress-bar" cx="128" cy="128" r="110" stroke="#00a9e0" stroke-width="14" fill="transparent" 
-                    stroke-dasharray="691.15" stroke-dashoffset="691.15" stroke-linecap="round"
-                    class="transition-all duration-1000 ease-out" />
+        <svg class="w-64 h-64">
+            <circle cx="128" cy="128" r="110" stroke="#1e293b" stroke-width="12" fill="transparent" />
+            <circle id="progress" cx="128" cy="128" r="110" stroke="#00a9e0" stroke-width="12" fill="transparent" 
+                    stroke-dasharray="691" stroke-dashoffset="691" stroke-linecap="round" class="progress-ring" />
         </svg>
         <div class="absolute text-center">
-            <span id="current-prot" class="text-6xl font-black italic">0</span>
-            <span class="block text-slate-500 font-bold uppercase text-xs">Grammes / <span id="goal-display">160</span></span>
+            <span id="display-val" class="text-6xl font-black italic">0</span>
+            <span class="block text-[10px] text-slate-500 font-bold uppercase mt-1">G PROTEINES / 160</span>
         </div>
     </div>
 
     <div class="mb-8">
-        <label for="camera-input" class="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-3 cursor-pointer hover:bg-sky-400 transition-all">
-            📸 ANALYSER MON PLAT (IA)
+        <label for="file-upload" id="ia-label" class="w-full bg-white text-black font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all cursor-pointer">
+            <span id="btn-text">📸 ANALYSER MON PLAT (IA)</span>
         </label>
-        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="processImage(event)">
-        <p id="ia-status" class="text-center text-[10px] mt-2 text-slate-500 italic">Prêt pour analyse visuelle</p>
+        <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this)">
+        <p id="log" class="text-[10px] text-center mt-3 text-slate-600 italic uppercase tracking-wider">Prêt pour scan visuel</p>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 mb-10">
-        <button onclick="addProt(30, 'Poulet')" class="btn-action p-4 rounded-xl border garmin-border text-left">
-            <span class="block text-xs text-slate-500">Poulet</span>
-            <span class="text-lg font-bold">+30g</span>
-        </button>
-        <button onclick="addProt(25, 'Whey')" class="btn-action p-4 rounded-xl border garmin-border text-left">
-            <span class="block text-xs text-slate-500">Whey</span>
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="add(25)" class="bg-[#1e293b] p-4 rounded-xl border border-slate-800 text-left active:scale-95 transition-all">
+            <span class="block text-[10px] text-slate-500 uppercase font-bold">Shaker</span>
             <span class="text-lg font-bold">+25g</span>
         </button>
-        <button onclick="addProt(12, '2 Oeufs')" class="btn-action p-4 rounded-xl border garmin-border text-left">
-            <span class="block text-xs text-slate-500">2 Oeufs</span>
-            <span class="text-lg font-bold">+12g</span>
-        </button>
-        <button onclick="resetDaily()" class="btn-action p-4 rounded-xl border border-red-900/30 text-left">
-            <span class="block text-xs text-red-500 uppercase">Reset</span>
-            <span class="text-lg font-bold text-red-500">000</span>
+        <button onclick="reset()" class="bg-[#1e293b] p-4 rounded-xl border border-red-900/20 text-left active:scale-95 transition-all">
+            <span class="block text-[10px] text-red-500 uppercase font-bold">Reset</span>
+            <span class="text-lg font-bold text-red-500 tracking-tighter">VIDER</span>
         </button>
     </div>
 
     <script>
-        // CONFIGURATION
-        let currentProt = parseInt(localStorage.getItem('protories_total')) || 0;
-        let dailyGoal = 160;
-        const API_KEY = "TON_API_KEY_ICI"; // On mettra ta clé après
+        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo"; // <--- METS TA CLÉ ICI
+        let total = parseInt(localStorage.getItem('prot_total')) || 0;
+        const goal = 160;
 
-        // INITIALISATION
-        document.getElementById('date-display').innerText = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-        updateUI();
-
-        function addProt(amount, type) {
-            currentProt += amount;
-            localStorage.setItem('protories_total', currentProt);
-            updateUI();
-            console.log("Ajouté:", type, amount + "g");
+        function update() {
+            document.getElementById('display-val').innerText = total;
+            const offset = 691 - (total / goal * 691);
+            document.getElementById('progress').style.strokeDashoffset = Math.max(0, offset);
+            localStorage.setItem('prot_total', total);
+            document.getElementById('date-now').innerText = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'short'});
         }
 
-        function updateUI() {
-            document.getElementById('current-prot').innerText = currentProt;
-            const circle = document.getElementById('progress-bar');
-            const circumference = 2 * Math.PI * 110;
-            const offset = circumference - (currentProt / dailyGoal * circumference);
-            circle.style.strokeDashoffset = Math.max(0, offset);
-        }
+        function add(n) { total += n; update(); }
+        function reset() { if(confirm('Reset?')){ total = 0; update(); } }
 
-        function resetDaily() {
-            if(confirm("Réinitialiser la journée ?")) {
-                currentProt = 0;
-                localStorage.setItem('protories_total', 0);
-                updateUI();
-            }
-        }
+        async function handleImage(input) {
+            const file = input.files[0];
+            if(!file) return;
 
-        async function processImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            document.getElementById('ia-status').innerText = "Analyse en cours par Gemini...";
-            document.getElementById('ia-status').classList.add('text-sky-400');
+            const label = document.getElementById('ia-label');
+            const log = document.getElementById('log');
+            const btnText = document.getElementById('btn-text');
 
-            // Simulation de l'IA pour le moment
-            setTimeout(() => {
-                alert("Photo reçue ! (On connectera ta clé API à cette étape pour l'analyse réelle)");
-                document.getElementById('ia-status').innerText = "Analyse terminée";
-            }, 2000);
+            label.style.opacity = "0.5";
+            btnText.innerText = "ANALYSE EN COURS...";
+            log.innerText = "L'IA calcule les portions...";
+
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const base64 = reader.result.split(',')[1];
+                try {
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            contents: [{ parts: [
+                                { text: "Analyse cette photo de nourriture. Estime le poids total et donne uniquement le nombre de grammes de protéines total sous la forme d'un chiffre seul." },
+                                { inline_data: { mime_type: "image/jpeg", data: base64 } }
+                            ]}]
+                        })
+                    });
+                    const data = await resp.json();
+                    const result = parseInt(data.candidates[0].content.parts[0].text.match(/\d+/)[0]);
+                    
+                    if(result) {
+                        total += result;
+                        update();
+                        log.innerText = `+${result}g détectés !`;
+                    }
+                } catch (e) {
+                    log.innerText = "Erreur d'analyse";
+                } finally {
+                    label.style.opacity = "1";
+                    btnText.innerText = "📸 ANALYSER MON PLAT (IA)";
+                    input.value = '';
+                }
+            };
+            reader.readAsDataURL(file);
         }
+        update();
     </script>
 </body>
 </html>
