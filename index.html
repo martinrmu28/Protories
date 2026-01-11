@@ -34,7 +34,7 @@
     </div>
 
     <div class="mb-8">
-        <label for="file-upload" id="ia-label" class="w-full bg-white text-black font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all cursor-pointer">
+        <label for="file-upload" id="ia-label" class="w-full bg-white text-black font-black py-5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all cursor-pointer text-center">
             <span id="btn-text">📸 ANALYSER MON PLAT (IA)</span>
         </label>
         <input id="file-upload" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this)">
@@ -53,7 +53,7 @@
     </div>
 
     <script>
-        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo"; // <--- METS TA CLÉ ICI
+        const API_KEY = "AIzaSyAoc-U6jQy6eiysfAQvel3m93tJfywNpxo";
         let total = parseInt(localStorage.getItem('prot_total')) || 0;
         const goal = 160;
 
@@ -66,7 +66,7 @@
         }
 
         function add(n) { total += n; update(); }
-        function reset() { if(confirm('Reset?')){ total = 0; update(); } }
+        function reset() { if(confirm('Réinitialiser ?')){ total = 0; update(); } }
 
         async function handleImage(input) {
             const file = input.files[0];
@@ -78,7 +78,7 @@
 
             label.style.opacity = "0.5";
             btnText.innerText = "ANALYSE EN COURS...";
-            log.innerText = "L'IA calcule les portions...";
+            log.innerText = "Envoi à Gemini...";
 
             const reader = new FileReader();
             reader.onload = async () => {
@@ -86,23 +86,34 @@
                 try {
                     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [
-                                { text: "Analyse cette photo de nourriture. Estime le poids total et donne uniquement le nombre de grammes de protéines total sous la forme d'un chiffre seul." },
+                                { text: "Analyse cette photo de nourriture. Estime le poids total et donne UNIQUEMENT le nombre de grammes de protéines total sous la forme d'un chiffre seul. Si tu ne vois pas de nourriture, réponds 0." },
                                 { inline_data: { mime_type: "image/jpeg", data: base64 } }
                             ]}]
                         })
                     });
-                    const data = await resp.json();
-                    const result = parseInt(data.candidates[0].content.parts[0].text.match(/\d+/)[0]);
                     
-                    if(result) {
+                    const data = await resp.json();
+                    
+                    if (data.error) {
+                        log.innerText = "Erreur : " + data.error.message;
+                        return;
+                    }
+
+                    const textResponse = data.candidates[0].content.parts[0].text;
+                    const result = parseInt(textResponse.match(/\d+/)[0]);
+                    
+                    if(!isNaN(result)) {
                         total += result;
                         update();
-                        log.innerText = `+${result}g détectés !`;
+                        log.innerText = `+${result}g protéines détectés !`;
+                    } else {
+                        log.innerText = "Impossible de lire le résultat.";
                     }
                 } catch (e) {
-                    log.innerText = "Erreur d'analyse";
+                    log.innerText = "Erreur réseau.";
                 } finally {
                     label.style.opacity = "1";
                     btnText.innerText = "📸 ANALYSER MON PLAT (IA)";
